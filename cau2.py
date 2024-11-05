@@ -111,6 +111,9 @@ label_result_derivative.grid(row=4, column=0, columnspan=3, padx=10, pady=5)
 label_result_integral = tk.Label(root, textvariable=result_integral)
 label_result_integral.grid(row=4, column=3, padx=10, pady=5)
 
+
+
+
 label_result_equation = tk.Label(root, textvariable=result_equation)
 label_result_equation.grid(row=5, column=0, columnspan=3, padx=10, pady=5)
 
