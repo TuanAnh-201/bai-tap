@@ -1,86 +1,74 @@
 import cv2
 import numpy as np
-from tkinter import *
-from tkinter import filedialog
-from PIL import Image, ImageTk
 
+# Hàm áp dụng bộ lọc làm mịn
+def apply_filter(frame, filter_type, kernel_size):
+    if filter_type == 'Gaussian':
+        return cv2.GaussianBlur(frame, (kernel_size, kernel_size), 0)
+    elif filter_type == 'Median':
+        return cv2.medianBlur(frame, kernel_size)
+    elif filter_type == 'Bilateral':
+        return cv2.bilateralFilter(frame, 9, 75, 75)
+    else:
+        return frame
 
-# Hàm xử lý ảnh
-def apply_filter():
-    global img, photo
+# Khởi tạo camera (sử dụng camera mặc định của máy tính)
+cap = cv2.VideoCapture(0)
 
-    # Lấy giá trị từ thanh trượt
-    kernel_size = slider.get()
+if not cap.isOpened():
+    print("Không thể mở camera!")
+    exit()
 
-    # Chọn bộ lọc Gaussian Blur
-    if filter_type.get() == "Gaussian":
-        filtered_img = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+# Tạo cửa sổ hiển thị
+cv2.namedWindow("Camera Feed")
 
-    # Chọn bộ lọc Median Filter
-    elif filter_type.get() == "Median":
-        filtered_img = cv2.medianBlur(img, kernel_size)
+# Đặt các tham số lọc mặc định
+filter_type = 'Gaussian'  # Mặc định là Gaussian
+kernel_size = 5  # Kích thước bộ lọc mặc định
+camera_active = True  # Biến kiểm tra trạng thái camera
 
-    # Chọn bộ lọc Bilateral Filter
-    elif filter_type.get() == "Bilateral":
-        filtered_img = cv2.bilateralFilter(img, 9, 75, 75)
+# Vòng lặp chính của ứng dụng
+while True:
+    if camera_active:
+        # Đọc một khung hình từ camera
+        ret, frame = cap.read()
+        if not ret:
+            print("Không thể đọc khung hình từ camera!")
+            break
 
-    # Chuyển ảnh đã xử lý thành dạng có thể hiển thị trên Tkinter
-    filtered_img_rgb = cv2.cvtColor(filtered_img, cv2.COLOR_BGR2RGB)
-    img_pil = Image.fromarray(filtered_img_rgb)
-    img_tk = ImageTk.PhotoImage(img_pil)
+        # Áp dụng bộ lọc làm mịn
+        frame_filtered = apply_filter(frame, filter_type, kernel_size)
 
-    # Cập nhật ảnh trong giao diện
-    panel.config(image=img_tk)
-    panel.image = img_tk
+        # Hiển thị khung hình gốc và khung hình đã xử lý
+        cv2.imshow('Original', frame)  # Hiển thị ảnh gốc
+        cv2.imshow('Filtered', frame_filtered)  # Hiển thị ảnh sau khi lọc
 
+    # Chờ người dùng nhấn phím để thay đổi bộ lọc hoặc thoát
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):  # Nhấn 'q' để thoát
+        break
+    elif key == ord('g'):  # Nhấn 'g' để chọn Gaussian Blur
+        filter_type = 'Gaussian'
+    elif key == ord('m'):  # Nhấn 'm' để chọn Median Filter
+        filter_type = 'Median'
+    elif key == ord('b'):  # Nhấn 'b' để chọn Bilateral Filter
+        filter_type = 'Bilateral'
+    elif key == ord('r'):  # Nhấn 'r' để điều chỉnh kích thước bộ lọc
+        kernel_size += 2
+        if kernel_size > 21:  # Giới hạn kích thước bộ lọc (kích thước phải là số lẻ)
+            kernel_size = 3
+    elif key == ord('t'):  # Nhấn 't' để tắt camera
+        if camera_active:
+            print("Tắt camera...")
+            camera_active = False
+            cap.release()  # Giải phóng tài nguyên của camera
+            cv2.destroyAllWindows()  # Đóng tất cả cửa sổ
+        else:
+            print("Mở lại camera...")
+            cap = cv2.VideoCapture(0)  # Mở lại camera
+            camera_active = True  # Kích hoạt lại camera
 
-# Hàm tải ảnh
-def load_image():
-    global img, photo
-
-    # Chọn file ảnh
-    file_path = filedialog.askopenfilename()
-    if not file_path:
-        return
-
-    # Đọc ảnh và chuyển đổi màu sắc
-    img = cv2.imread(file_path)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # Chuyển ảnh từ mảng NumPy sang hình ảnh có thể hiển thị
-    img_pil = Image.fromarray(img_rgb)
-    img_tk = ImageTk.PhotoImage(img_pil)
-
-    # Hiển thị ảnh lên giao diện
-    panel.config(image=img_tk)
-    panel.image = img_tk
-
-
-# Khởi tạo giao diện người dùng (GUI) bằng Tkinter
-root = Tk()
-root.title("Ứng Dụng Lọc Làm Mịn Ảnh")
-
-# Panel để hiển thị ảnh
-panel = Label(root)
-panel.pack(padx=10, pady=10)
-
-# Nút tải ảnh
-btn_load = Button(root, text="Tải ảnh", command=load_image)
-btn_load.pack(padx=10, pady=10)
-
-# Chọn bộ lọc
-filter_type = StringVar(value="Gaussian")
-filter_menu = OptionMenu(root, filter_type, "Gaussian", "Median", "Bilateral")
-filter_menu.pack(padx=10, pady=10)
-
-# Thanh trượt điều chỉnh kích thước bộ lọc
-slider = Scale(root, from_=3, to_=21, orient=HORIZONTAL, label="Kích thước bộ lọc", resolution=2)
-slider.set(5)  # Đặt giá trị mặc định cho thanh trượt
-slider.pack(padx=10, pady=10)
-
-# Nút áp dụng bộ lọc
-btn_apply = Button(root, text="Áp dụng bộ lọc", command=apply_filter)
-btn_apply.pack(padx=10, pady=10)
-
-# Khởi động giao diện
-root.mainloop()
+# Giải phóng camera và đóng tất cả cửa sổ khi thoát
+if camera_active:
+    cap.release()
+cv2.destroyAllWindows()
