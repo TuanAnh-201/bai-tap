@@ -1,136 +1,122 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
 import tkinter as tk
 from tkinter import messagebox
-import math
+import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-# Tạo cửa sổ chính
+# Đọc dữ liệu từ file CSV
+df = pd.read_csv('water_potability.csv')
+
+# Xử lý dữ liệu thiếu: Điền giá trị thiếu bằng giá trị trung bình của cột
+df.fillna(df.mean(), inplace=True)
+
+# Chia dữ liệu thành đặc trưng (X) và nhãn (y)
+X = df.drop('Potability', axis=1)  # Cột Potability là nhãn
+y = df['Potability']
+
+# Chia dữ liệu thành tập huấn luyện và kiểm tra
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Chuẩn hóa dữ liệu (Standardization)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Tạo mô hình RandomForestClassifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Huấn luyện mô hình
+model.fit(X_train, y_train)
+
+# Đánh giá mô hình
+y_pred = model.predict(X_test)
+print("Classification Report:\n", classification_report(y_test, y_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+# Vẽ confusion matrix
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix")
+plt.show()
+
+# Hàm để dự đoán chất lượng nước
+def predict_water_quality():
+    try:
+        # Lấy giá trị đầu vào từ các ô nhập
+        ph = float(entry_ph.get())
+        hardness = float(entry_hardness.get())
+        solid = float(entry_solid.get())
+        chloramines = float(entry_chloramines.get())
+        sulfate = float(entry_sulfate.get())
+        conductivity = float(entry_conductivity.get())
+        organic_carbon = float(entry_organic_carbon.get())
+        trihalomethanes = float(entry_trihalomethanes.get())
+        turbidity = float(entry_turbidity.get())
+
+        # Tạo mảng đặc trưng từ các giá trị đầu vào
+        input_data = [[ph, hardness, solid, chloramines, sulfate, conductivity, organic_carbon, trihalomethanes, turbidity]]
+
+        # Chuẩn hóa dữ liệu đầu vào
+        input_data_scaled = scaler.transform(input_data)
+
+        # Dự đoán chất lượng nước (Potability)
+        prediction = model.predict(input_data_scaled)
+
+        # Hiển thị kết quả
+        if prediction == 1:
+            messagebox.showinfo("Kết quả", "Nước có thể uống được (Potable).")
+        else:
+            messagebox.showwarning("Kết quả", "Nước không thể uống được (Non-potable).")
+    except ValueError:
+        messagebox.showerror("Lỗi", "Vui lòng nhập các giá trị hợp lệ.")
+
+# Tạo cửa sổ chính của giao diện người dùng
 root = tk.Tk()
-root.title("Phần mềm Hỗ trợ học tập môn Hình Học")
+root.title("Ứng Dụng Xác Định Chất Lượng Nước")
 
-# Hàm tính diện tích và chu vi hình tròn
-def calculate_circle():
-    try:
-        radius = float(entry_radius.get())  # Lấy bán kính từ người dùng
-        area = math.pi * radius**2
-        perimeter = 2 * math.pi * radius
-        result_circle.set(f"Diện tích: {area:.2f}, Chu vi: {perimeter:.2f}")
-    except ValueError:
-        messagebox.showerror("Lỗi", "Vui lòng nhập giá trị hợp lệ cho bán kính.")
+# Tạo các nhãn và ô nhập liệu
+tk.Label(root, text="pH").grid(row=0, column=0)
+entry_ph = tk.Entry(root)
+entry_ph.grid(row=0, column=1)
 
-# Hàm tính diện tích và chu vi hình vuông
-def calculate_square():
-    try:
-        side = float(entry_side.get())  # Lấy cạnh từ người dùng
-        area = side**2
-        perimeter = 4 * side
-        result_square.set(f"Diện tích: {area:.2f}, Chu vi: {perimeter:.2f}")
-    except ValueError:
-        messagebox.showerror("Lỗi", "Vui lòng nhập giá trị hợp lệ cho cạnh.")
+tk.Label(root, text="Hardness").grid(row=1, column=0)
+entry_hardness = tk.Entry(root)
+entry_hardness.grid(row=1, column=1)
 
-# Hàm tính diện tích và chu vi hình chữ nhật
-def calculate_rectangle():
-    try:
-        length = float(entry_length.get())
-        width = float(entry_width.get())
-        area = length * width
-        perimeter = 2 * (length + width)
-        result_rectangle.set(f"Diện tích: {area:.2f}, Chu vi: {perimeter:.2f}")
-    except ValueError:
-        messagebox.showerror("Lỗi", "Vui lòng nhập giá trị hợp lệ cho chiều dài và chiều rộng.")
+tk.Label(root, text="Solid").grid(row=2, column=0)
+entry_solid = tk.Entry(root)
+entry_solid.grid(row=2, column=1)
 
-# Hàm tính thể tích hình hộp chữ nhật
-def calculate_cuboid():
-    try:
-        length = float(entry_length.get())
-        width = float(entry_width.get())
-        height = float(entry_height.get())
-        volume = length * width * height
-        surface_area = 2 * (length*width + length*height + width*height)
-        result_cuboid.set(f"Thể tích: {volume:.2f}, Diện tích xung quanh: {surface_area:.2f}")
-    except ValueError:
-        messagebox.showerror("Lỗi", "Vui lòng nhập giá trị hợp lệ cho chiều dài, chiều rộng và chiều cao.")
+tk.Label(root, text="Chloramines").grid(row=3, column=0)
+entry_chloramines = tk.Entry(root)
+entry_chloramines.grid(row=3, column=1)
 
-# Hàm vẽ hình tròn
-def plot_circle():
-    try:
-        radius = float(entry_radius.get())  # Lấy bán kính từ người dùng
-        fig, ax = plt.subplots()
-        ax.set_xlim([-radius-1, radius+1])
-        ax.set_ylim([-radius-1, radius+1])
-        ax.set_aspect('equal')
-        circle = plt.Circle((0, 0), radius, edgecolor='blue', facecolor='none')
-        ax.add_artist(circle)
-        ax.set_title(f"Hình tròn bán kính {radius}")
-        canvas = FigureCanvasTkAgg(fig, master=root)
-        canvas.get_tk_widget().grid(row=5, column=0, columnspan=3)
-        canvas.draw()
-    except ValueError:
-        messagebox.showerror("Lỗi", "Vui lòng nhập giá trị hợp lệ cho bán kính.")
+tk.Label(root, text="Sulfate").grid(row=4, column=0)
+entry_sulfate = tk.Entry(root)
+entry_sulfate.grid(row=4, column=1)
 
-# Giao diện người dùng (UI)
-label_radius = tk.Label(root, text="Nhập bán kính hình tròn:")
-label_radius.grid(row=0, column=0, padx=10, pady=10)
-entry_radius = tk.Entry(root)
-entry_radius.grid(row=0, column=1, padx=10, pady=10)
+tk.Label(root, text="Conductivity").grid(row=5, column=0)
+entry_conductivity = tk.Entry(root)
+entry_conductivity.grid(row=5, column=1)
 
-label_side = tk.Label(root, text="Nhập cạnh hình vuông:")
-label_side.grid(row=1, column=0, padx=10, pady=10)
-entry_side = tk.Entry(root)
-entry_side.grid(row=1, column=1, padx=10, pady=10)
+tk.Label(root, text="Organic Carbon").grid(row=6, column=0)
+entry_organic_carbon = tk.Entry(root)
+entry_organic_carbon.grid(row=6, column=1)
 
-label_length = tk.Label(root, text="Nhập chiều dài hình chữ nhật:")
-label_length.grid(row=2, column=0, padx=10, pady=10)
-entry_length = tk.Entry(root)
-entry_length.grid(row=2, column=1, padx=10, pady=10)
+tk.Label(root, text="Trihalomethanes").grid(row=7, column=0)
+entry_trihalomethanes = tk.Entry(root)
+entry_trihalomethanes.grid(row=7, column=1)
 
-label_width = tk.Label(root, text="Nhập chiều rộng hình chữ nhật:")
-label_width.grid(row=3, column=0, padx=10, pady=10)
-entry_width = tk.Entry(root)
-entry_width.grid(row=3, column=1, padx=10, pady=10)
+tk.Label(root, text="Turbidity").grid(row=8, column=0)
+entry_turbidity = tk.Entry(root)
+entry_turbidity.grid(row=8, column=1)
 
-label_height = tk.Label(root, text="Nhập chiều cao hình hộp chữ nhật:")
-label_height.grid(row=4, column=0, padx=10, pady=10)
-entry_height = tk.Entry(root)
-entry_height.grid(row=4, column=1, padx=10, pady=10)
+# Nút để dự đoán chất lượng nước
+predict_button = tk.Button(root, text="Dự Đoán", command=predict_water_quality)
+predict_button.grid(row=9, columnspan=2)
 
-# Nút tính diện tích và chu vi hình tròn
-button_circle = tk.Button(root, text="Tính hình tròn", command=calculate_circle)
-button_circle.grid(row=0, column=2, padx=10, pady=10)
-
-# Nút tính diện tích và chu vi hình vuông
-button_square = tk.Button(root, text="Tính hình vuông", command=calculate_square)
-button_square.grid(row=1, column=2, padx=10, pady=10)
-
-# Nút tính diện tích và chu vi hình chữ nhật
-button_rectangle = tk.Button(root, text="Tính hình chữ nhật", command=calculate_rectangle)
-button_rectangle.grid(row=2, column=2, padx=10, pady=10)
-
-# Nút tính thể tích hình hộp chữ nhật
-button_cuboid = tk.Button(root, text="Tính hình hộp chữ nhật", command=calculate_cuboid)
-button_cuboid.grid(row=3, column=2, padx=10, pady=10)
-
-# Nút vẽ hình tròn
-button_plot_circle = tk.Button(root, text="Vẽ hình tròn", command=plot_circle)
-button_plot_circle.grid(row=4, column=2, padx=10, pady=10)
-
-# Kết quả tính toán
-result_circle = tk.StringVar()
-result_square = tk.StringVar()
-result_rectangle = tk.StringVar()
-result_cuboid = tk.StringVar()
-
-label_result_circle = tk.Label(root, textvariable=result_circle)
-label_result_circle.grid(row=5, column=0, columnspan=2, padx=10, pady=5)
-
-label_result_square = tk.Label(root, textvariable=result_square)
-label_result_square.grid(row=5, column=2, padx=10, pady=5)
-
-label_result_rectangle = tk.Label(root, textvariable=result_rectangle)
-label_result_rectangle.grid(row=6, column=0, columnspan=3, padx=10, pady=5)
-
-label_result_cuboid = tk.Label(root, textvariable=result_cuboid)
-label_result_cuboid.grid(row=7, column=0, columnspan=3, padx=10, pady=5)
-
-# Khởi chạy giao diện
+# Chạy ứng dụng Tkinter
 root.mainloop()
