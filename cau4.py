@@ -1,148 +1,164 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as tk
+from tkinter import ttk, scrolledtext, filedialog
 
-
-# Hàm tính toán điểm cuối kỳ dựa trên các yếu tố
-def calculate_final_score(row):
-    # Lấy các điểm số từ các cột tương ứng
-    L1 = row['L1']
-    L2 = row['L2']
-    TX1 = row['TX1']
-    TX2 = row['TX2']
-
-    # Tính điểm cuối kỳ (công thức có thể thay đổi theo yêu cầu)
-    final_score = (L1 * 0.3) + (L2 * 0.3) + (TX1 * 0.2) + (TX2 * 0.2)
-    return np.clip(final_score, 0, 10)
-
-
-# Hàm tạo báo cáo
-def generate_report():
-    if df is None:
-        messagebox.showerror("Lỗi", "Vui lòng tải file CSV trước.")
-        return
-
-    # Tính toán điểm cuối kỳ cho từng sinh viên và tạo báo cáo
-    report_text = "Báo cáo học phần:\n\n"
-
-    df['Cuối kỳ'] = df.apply(calculate_final_score, axis=1)
-
-    for _, row in df.iterrows():
-        report_text += f"Mã lớp: {row['Mã lớp']}\n"
-        report_text += f"Số sinh viên: {row['Số SV']}\n"
-        report_text += f"Loại A+: {row['Loại A+']}\n"
-        report_text += f"Loại A: {row['Loại A']}\n"
-        report_text += f"Loại B+: {row['Loại B+']}\n"
-        report_text += f"Loại B: {row['Loại B']}\n"
-        report_text += f"Loại C+: {row['Loại C+']}\n"
-        report_text += f"Loại C: {row['Loại C']}\n"
-        report_text += f"Loại D+: {row['Loại D+']}\n"
-        report_text += f"Loại D: {row['Loại D']}\n"
-        report_text += f"Loại F: {row['Loại F']}\n"
-        report_text += f"Điểm L1: {row['L1']}\n"
-        report_text += f"Điểm L2: {row['L2']}\n"
-        report_text += f"Điểm TX1: {row['TX1']}\n"
-        report_text += f"Điểm TX2: {row['TX2']}\n"
-        report_text += f"Điểm cuối kỳ: {row['Cuối kỳ']:.2f}\n\n"
-
-    # Cập nhật báo cáo lên giao diện
-    report.set(report_text)
-
-    # Vẽ đồ thị kết quả học tập
-    plot_performance()
-
-
-# Hàm vẽ đồ thị kết quả học tập của các lớp
-def plot_performance():
-    if df is None:
-        return
-
-    # Vẽ đồ thị kết quả cuối kỳ
-    class_names = df['Mã lớp']
-    final_scores = df['Cuối kỳ']
-
-    # Vẽ biểu đồ
-    fig, ax = plt.subplots()
-    ax.bar(class_names, final_scores, color='skyblue')
-    ax.set_title('Kết quả cuối kỳ của các lớp')
-    ax.set_ylabel('Điểm cuối kỳ')
-    ax.set_xticklabels(class_names, rotation=45, ha='right')
-
-    # Đưa đồ thị vào trong cửa sổ Tkinter
-    canvas = FigureCanvasTkAgg(fig, master=root)
-    canvas.get_tk_widget().grid(row=6, column=0, columnspan=4)
-    canvas.draw()
-
-
-# Hàm tải file CSV
-def load_csv():
-    global df
-    # Mở hộp thoại để chọn file CSV
+# Define a function to read CSV file
+def read_csv_file():
     file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-    if not file_path:
-        return
+    if file_path:
+        df = pd.read_csv(file_path, index_col=0, header=0)
+        global in_data, df_filtered, in_data_filtered
+        in_data = df.to_numpy()
+        df_filtered = df[df.index.isin(range(1, 10))]
+        in_data_filtered = df_filtered.to_numpy()
+        show_all_data()
 
-    try:
-        # Đọc dữ liệu từ file CSV vào DataFrame
-        df = pd.read_csv(file_path)
+# Functions to display data
+def show_all_data():
+    text_area.delete('1.0', tk.END)
+    text_area.insert(tk.END, df_filtered.to_string())
 
-        # Kiểm tra xem các cột dữ liệu có hợp lệ hay không
-        required_columns = ['STT', 'Mã lớp', 'Số SV', 'Loại A+', 'Loại A', 'Loại B+', 'Loại B', 'Loại C+', 'Loại C',
-                            'Loại D+', 'Loại D', 'Loại F', 'L1', 'L2', 'TX1', 'TX2', 'Cuối kỳ']
-        if not all(col in df.columns for col in required_columns):
-            messagebox.showerror("Lỗi", "File CSV không có đủ các cột yêu cầu.")
-            df = None
-            return
+def show_total_students():
+    tongsv = in_data_filtered[:, 1]
+    total_students = np.sum(tongsv)
+    text_area.delete('1.0', tk.END)
+    text_area.insert(tk.END, f"Tổng số sinh viên đi thi: {total_students}\n\n")
+    for i, sv in enumerate(tongsv, start=1):
+        text_area.insert(tk.END, f"Lớp {i}: {sv} sinh viên\n")
 
-        messagebox.showinfo("Thông báo", "Dữ liệu đã được tải thành công.")
-    except Exception as e:
-        messagebox.showerror("Lỗi", f"Không thể tải file CSV: {e}")
-        df = None
+def show_max_scores():
+    diemA_plus = in_data_filtered[:, 2]
+    diemA = in_data_filtered[:, 3]
+    diemB_plus = in_data_filtered[:, 4]
+    diemB = in_data_filtered[:, 5]
+    diemC_plus = in_data_filtered[:, 6]
+    diemC = in_data_filtered[:, 7]
+    diemD_plus = in_data_filtered[:, 8]
+    diemD = in_data_filtered[:, 9]
+    diemF = in_data_filtered[:, 10]
+    max_a_plus = df_filtered.index[np.argmax(diemA_plus)]
+    max_a = df_filtered.index[np.argmax(diemA)]
+    max_b_plus = df_filtered.index[np.argmax(diemB_plus)]
+    max_b = df_filtered.index[np.argmax(diemB)]
+    max_c_plus = df_filtered.index[np.argmax(diemC_plus)]
+    max_c = df_filtered.index[np.argmax(diemC)]
+    max_d_plus = df_filtered.index[np.argmax(diemD_plus)]
+    max_d = df_filtered.index[np.argmax(diemD)]
+    max_f = df_filtered.index[np.argmax(diemF)]
+    text_area.delete('1.0', tk.END)
+    text_area.insert(tk.END, f"Lớp có nhiều điểm A+ nhất: {max_a_plus}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm A nhất: {max_a}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm B+ nhất: {max_b_plus}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm B nhất: {max_b}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm C+ nhất: {max_c_plus}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm C nhất: {max_c}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm D+ nhất: {max_d_plus}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm D nhất: {max_d}\n")
+    text_area.insert(tk.END, f"Lớp có nhiều điểm F nhất: {max_f}\n")
+
+def show_statistics():
+    plt.figure()
+    diemA_plus = in_data_filtered[:, 2]
+    diemA = in_data_filtered[:, 3]
+    diemB_plus = in_data_filtered[:, 4]
+    diemB = in_data_filtered[:, 5]
+    diemC_plus = in_data_filtered[:, 6]
+    diemC = in_data_filtered[:, 7]
+    diemD_plus = in_data_filtered[:, 8]
+    diemD = in_data_filtered[:, 9]
+    diemF = in_data_filtered[:, 10]
+    plt.plot(range(len(diemA_plus)), diemA_plus, 'm-', label="Điểm A+")
+    plt.plot(range(len(diemA)), diemA, 'r-', label="Điểm A")
+    plt.plot(range(len(diemB_plus)), diemB_plus, 'g-', label="Điểm B+")
+    plt.plot(range(len(diemB)), diemB, 'b-', label="Điểm B")
+    plt.plot(range(len(diemC_plus)), diemC_plus, 'c-', label="Điểm C+")
+    plt.plot(range(len(diemC)), diemC, 'y-', label="Điểm C")
+    plt.plot(range(len(diemD_plus)), diemD_plus, 'orange', label="Điểm D+")
+    plt.plot(range(len(diemD)), diemD, 'k-', label="Điểm D")
+    plt.plot(range(len(diemF)), diemF, 'purple', label="Điểm F")
+    plt.xlabel("Lớp")
+    plt.ylabel("Số sinh viên đạt điểm")
+    plt.legend(loc='upper right')
+    plt.title("Thống kê điểm")
+    plt.show()
 
 
-# Hàm lưu báo cáo ra file CSV mới
-def save_report():
-    if df is None:
-        messagebox.showerror("Lỗi", "Không có dữ liệu để lưu báo cáo.")
-        return
-
-    try:
-        # Lưu DataFrame vào một file CSV mới
-        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-        if file_path:
-            df.to_csv(file_path, index=False)
-            messagebox.showinfo("Thông báo", "Báo cáo đã được lưu thành công.")
-    except Exception as e:
-        messagebox.showerror("Lỗi", f"Không thể lưu báo cáo: {e}")
+def show_output_standard():
+    plt.figure()
+    l1 = in_data_filtered[:, 11]
+    l2 = in_data_filtered[:, 12]
+    plt.plot(range(len(l1)), l1, 'r-', label="L1")
+    plt.plot(range(len(l2)), l2, 'g-', label="L2")
+    plt.xlabel("Lớp")
+    plt.ylabel("Chuẩn đầu ra")
+    plt.legend(loc='upper right')
+    plt.title("Chuẩn đầu ra")
+    plt.show()
 
 
-# Khởi tạo DataFrame là None
-df = None
+def show_regular_scores():
+    plt.figure()
+    # Assuming TX1 and TX2 are in the first and second columns (adjust indices if needed)
+    tx1 = in_data_filtered[:, 0]
+    tx2 = in_data_filtered[:, 1]
+    plt.plot(range(len(tx1)), tx1, 'r-', label="TX1")
+    plt.plot(range(len(tx2)), tx2, 'g-', label="TX2")
+    plt.xlabel("Lớp")
+    plt.ylabel("Điểm thường xuyên")
+    plt.legend(loc='upper right')
+    plt.title("Điểm thường xuyên")
+    plt.show()
 
-# Giao diện người dùng (UI)
+
+def show_final_scores():
+    plt.figure()
+    final_scores = in_data_filtered[:, 15]
+    plt.plot(range(len(final_scores)), final_scores, 'b-', label="Điểm cuối kỳ")
+    plt.xlabel("Lớp")
+    plt.ylabel("Điểm cuối kỳ")
+    plt.legend(loc='upper right')
+    plt.title("Điểm cuối kỳ")
+    plt.show()
+
+
+# Tạo cửa sổ chính
 root = tk.Tk()
-root.title("Chương trình tạo báo cáo học phần môn học")
+root.title("Quản lý điểm")
+root.geometry("1500x500")  # Đặt kích thước cửa sổ lớn hơn
 
-# Nút tải file CSV
-button_load_csv = tk.Button(root, text="Tải File CSV", command=load_csv)
-button_load_csv.grid(row=0, column=0, padx=10, pady=10)
+# Tạo khung cho các nút
+frame_buttons = ttk.Frame(root)
+frame_buttons.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
-# Nút tạo báo cáo
-button_generate_report = tk.Button(root, text="Tạo Báo Cáo", command=generate_report)
-button_generate_report.grid(row=1, column=0, padx=10, pady=10)
+# Tạo khung cho khu vực hiển thị văn bản
+frame_text = ttk.Frame(root)
+frame_text.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-# Nút lưu báo cáo
-button_save_report = tk.Button(root, text="Lưu Báo Cáo", command=save_report)
-button_save_report.grid(row=1, column=1, padx=10, pady=10)
+# Tạo các nút lựa chọn
+btn_load_data = ttk.Button(frame_buttons, text="Nhập dữ liệu từ file CSV", command=read_csv_file)
+btn_all_data = ttk.Button(frame_buttons, text="Hiển thị toàn bộ dữ liệu", command=show_all_data)
+btn_total_students = ttk.Button(frame_buttons, text="Tổng số sinh viên đi thi", command=show_total_students)
+btn_max_scores = ttk.Button(frame_buttons, text="Lớp có nhiều điểm nhất", command=show_max_scores)
+btn_statistics = ttk.Button(frame_buttons, text="Thống kê điểm", command=show_statistics)
+btn_output_standard = ttk.Button(frame_buttons, text="Chuẩn đầu ra", command=show_output_standard)
+btn_regular_scores = ttk.Button(frame_buttons, text="Điểm thường xuyên", command=show_regular_scores)
+btn_final_scores = ttk.Button(frame_buttons, text="Điểm cuối kỳ", command=show_final_scores)
 
-# Kết quả báo cáo
-report = tk.StringVar()
+# Đặt các nút lên khung
+btn_load_data.pack(pady=5)
+btn_all_data.pack(pady=5)
+btn_total_students.pack(pady=5)
+btn_max_scores.pack(pady=5)
+btn_statistics.pack(pady=5)
+btn_output_standard.pack(pady=5)
+btn_regular_scores.pack(pady=5)
+btn_final_scores.pack(pady=5)
 
-label_result_report = tk.Label(root, textvariable=report, justify=tk.LEFT, anchor="w", width=50, height=15)
-label_result_report.grid(row=2, column=0, columnspan=4, padx=10, pady=10)
+# Tạo khu vực hiển thị văn bản
+text_area = scrolledtext.ScrolledText(frame_text, width=100, height=80)  # Đặt kích thước khu vực văn bản lớn hơn
+text_area.pack(fill=tk.BOTH, expand=True)
 
-# Khởi chạy giao diện
+# Chạy ứng dụng
 root.mainloop()
