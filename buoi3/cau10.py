@@ -42,6 +42,12 @@ image_bright = increase_brightness(image)
 # Cải thiện độ tương phản
 image_contrast = enhance_contrast(image_bright)
 
+
+
+
+
+
+
 # Giảm nhiễu
 image_enhanced = reduce_noise(image_contrast)
 
