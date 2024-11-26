@@ -112,11 +112,13 @@ def game():
         # Cập nhật màn hình
         pygame.display.update()
 
+
         # Điều chỉnh tốc độ khung hình
         clock.tick(FPS)
 
 # Chạy game
 game()
+
 
 # Thoát khỏi pygame
 pygame.quit()
